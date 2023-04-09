@@ -5,9 +5,22 @@
 #include <string>
 using namespace sf;
 
+void updateBranches(int seed);
+
+const int NUM_BRANCHES = 6;
+Sprite branches[NUM_BRANCHES];
+
+//where is the player/branch?
+enum class side {
+	LEFT,
+	RIGHT,
+	NONE
+};
+side branchPositions[NUM_BRANCHES];
+
 int main()
 {
-    VideoMode vm(960, 480);
+	VideoMode vm(960, 480);
     RenderWindow window(vm, "Timber");
 
     window.setVerticalSyncEnabled(true);
@@ -93,7 +106,7 @@ int main()
 	float timeBarHeight = 15;
 	timeBar.setSize(Vector2f(timeBarStartWidth, timeBarHeight));
 	timeBar.setFillColor(Color::White);
-	timeBar.setPosition((960 / 2) - timeBarStartWidth / 2, 200);
+	timeBar.setPosition(890.f - timeBarStartWidth / 2, 445.f);
 
 	Time gameTimeTotal;
 	float timeRemaining = 6.0f;
@@ -104,38 +117,47 @@ int main()
 	
 	//draw some text
 	int score = 0;
-
 	Text messageText;
 	Text scoreText;
-
 	//chosing a font
 	Font font;
 	font.loadFromFile(dir + "fonts/consola.ttf");
-
 	//set the font to our message
 	messageText.setFont(font);
 	scoreText.setFont(font);
-
 	//assign the actual message
 	messageText.setString("Press Enter to start!");
 	scoreText.setString("Score = 0");
-
 	//text size
 	messageText.setCharacterSize(50);
 	scoreText.setCharacterSize(30);
-
 	//chose a color
 	messageText.setFillColor(Color::White);
 	scoreText.setFillColor(Color::White);
-
 	//text position
 	FloatRect textRect = messageText.getLocalBounds();
-
 	messageText.setOrigin(textRect.left + textRect.width / 2.0f,
 						  textRect.top + textRect.height / 2.0f);
 	messageText.setPosition(960 / 2.0f, 480 / 2.0f);
-
 	scoreText.setPosition(20, 430);
+
+	//prepare 6 branches
+	Texture textureBranch;
+	textureBranch.loadFromFile("graphics/branch.png");
+	//set the texture for 6 branch sprite
+	for (int i = 0; i < NUM_BRANCHES; i++) {
+		branches[i].setTexture(textureBranch);
+		branches[i].setPosition(-2000, -2000);
+		//set the sprite's origin to dead centre
+		//we can then spin it round without changing its position
+		branches[i].setOrigin(80, 80);
+	}
+
+	updateBranches(1);
+	updateBranches(2);
+	updateBranches(3);
+	updateBranches(4);
+	updateBranches(5);
 
 	while (window.isOpen())
     {
@@ -275,6 +297,25 @@ int main()
 			ss << "Score = " << score;
 			scoreText.setString(ss.str());
 
+			//update the branch sprites
+			for (int i = 0; i < NUM_BRANCHES; i++) {
+				float height = i * 80;
+				if (branchPositions[i] == side::LEFT) {
+					//move sprite to the left side
+					branches[i].setPosition(380, height);
+					//flip sprite round the other way
+					branches[i].setRotation(180);
+				} else if (branchPositions[i] == side::RIGHT) {
+					//move sprite to the right side
+					branches[i].setPosition(580, height);
+					//set sprite rotation to normal
+					branches[i].setRotation(0);
+				} else {
+					//hide the branch
+					branches[i].setPosition(2000, height);
+				}
+			}
+
 		} //end if (!paused)
         /*
         ************************************************************
@@ -290,6 +331,9 @@ int main()
 		window.draw(spriteCloud1);
 		window.draw(spriteCloud2);
 		window.draw(spriteCloud3);
+		for (int i = 0; i < NUM_BRANCHES; i++) {
+			window.draw(branches[i]);
+		}
 		window.draw(spriteTree);
 		if (wingFlap)
 			window.draw(spriteBird);
@@ -309,4 +353,28 @@ int main()
         window.display();
     }
     return 0;
+}
+
+//
+void updateBranches(int seed) {
+	//move all the branches down one place
+	for (int i = NUM_BRANCHES - 1; i > 0; --i) {
+		branchPositions[i] = branchPositions[i - 1];
+	}
+
+	//spawn a new branch at 0 position
+	//LEFT, RIGHT or NONE
+	srand(int(time(0)) + seed);
+	int r = (rand() % 5);
+	switch (r) {
+		case 0:
+			branchPositions[0] = side::LEFT;
+			break;
+		case 1:
+			branchPositions[0] = side::RIGHT;
+			break;
+		default:
+			branchPositions[0] = side::NONE;
+			break;
+	}
 }
