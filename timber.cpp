@@ -47,7 +47,7 @@ int main()
 	}
 	Sprite spriteTree;
 	spriteTree.setTexture(textureTree);
-	spriteTree.setPosition(400, 0);
+	spriteTree.setPosition(400, -100);
 
 	//bird
 	Texture textureBird;
@@ -152,12 +152,54 @@ int main()
 		//we can then spin it round without changing its position
 		branches[i].setOrigin(80, 80);
 	}
+	
+	//updateBranches(0);
+	//updateBranches(1);
+	//updateBranches(2);
+	//updateBranches(3);
+	//updateBranches(4);
+	//updateBranches(5);
 
-	updateBranches(1);
-	updateBranches(2);
-	updateBranches(3);
-	updateBranches(4);
-	updateBranches(5);
+	//prepare the player
+	Texture texturePlayerDefault;
+	texturePlayerDefault.loadFromFile(dir + "graphics/hero_default.png");
+	Sprite spritePlayerDefault;
+	spritePlayerDefault.setTexture(texturePlayerDefault);
+	spritePlayerDefault.setPosition(300, 250);
+	Texture texturePlayerHits;
+	texturePlayerHits.loadFromFile(dir + "graphics/hero_hits.png");
+	Sprite spritePlayerHits;
+	spritePlayerHits.setTexture(texturePlayerHits);
+	spritePlayerHits.setPosition(300, 250);
+	
+	//the player starts on the left
+	side playerSide = side::LEFT;
+
+	//prepare the gravestone
+	Texture textureRIP;
+	textureRIP.loadFromFile("graphics/rip.png");
+	Sprite spriteRIP;
+	spriteRIP.setTexture(textureRIP);
+	spriteRIP.setPosition(370, 280);
+
+	//prepare the flying log;
+	Texture textureLog;
+	textureLog.loadFromFile("graphics/log.png");
+	Sprite spriteLog;
+	spriteLog.setTexture(textureLog);
+	spriteLog.setPosition(400, 300);
+
+	//same other useful log related variables
+	bool logActive = false;
+	float logSpeed = 1000;
+	float logSpeedX = 1000;
+	float logSpeedY = -1500;
+
+	//control the player input
+	bool acceptInput = false;
+	
+	//player punch
+	bool playerPunch = false;
 
 	while (window.isOpen())
     {
@@ -166,6 +208,19 @@ int main()
         Handle the players input
         ************************************************************
         */
+        sf::Event event;
+        while (window.pollEvent(event)) {
+            if (event.type == sf::Event::Closed)
+                window.close();
+	
+			if (event.type == Event::KeyReleased && !paused) {
+				//listen for key presses again
+				acceptInput = true;
+				//
+				playerPunch = false;
+			}
+		}
+
 
 		if (Keyboard::isKeyPressed(Keyboard::Escape)) {
 			window.close();
@@ -174,16 +229,76 @@ int main()
 		//start the game
 		if (Keyboard::isKeyPressed(Keyboard::Return)) {
 			paused = false;
+			playerPunch = false;
 			//reset the time and the score
 			score = 0;
 			timeRemaining = 6;
-		}
 
-        sf::Event event;
-        while (window.pollEvent(event)) {
-            if (event.type == sf::Event::Closed)
-                window.close();
-        }
+			//make all branches disappear -
+			//starting in the second position
+			for (int i = 1; i < NUM_BRANCHES; i++) {
+				branchPositions[i] = side::NONE;
+			}
+
+			//make sure the gravestone is hidden
+			spriteRIP.setPosition(370, 2000);
+
+			//move the player into position
+			spritePlayerDefault.setScale(1, 1);
+			spritePlayerHits.setScale(1, 1);
+			spritePlayerDefault.setPosition(300, 250);
+			spritePlayerHits.setPosition(300, 250);
+
+			acceptInput = true;
+		}
+		
+		//wrap the player controls to make sure we are accepting input
+		if (acceptInput) {
+			//firts handle pressing the right cursor key
+			if (Keyboard::isKeyPressed(Keyboard::Right)) {
+				playerSide = side::RIGHT;
+				score++;
+
+				//add to the amount of time remaining
+				timeRemaining += .15;
+
+				spritePlayerDefault.setPosition(660, 250);
+				spritePlayerHits.setPosition(660, 250);
+				spritePlayerDefault.setScale(-1, 1);
+				spritePlayerHits.setScale(-1, 1);
+
+				playerPunch = true;
+				//update branches
+				updateBranches(score);
+				//set the log flying to the left
+				spriteLog.setPosition(400, 300);
+				logSpeedX = -5000;
+				logActive = true;
+
+				acceptInput = false;
+			}
+
+			if (Keyboard::isKeyPressed(Keyboard::Left)) {
+				playerSide = side::LEFT;
+				score++;
+
+				timeRemaining += .15;
+
+				spritePlayerDefault.setPosition(300, 250);
+				spritePlayerHits.setPosition(300, 250);
+				spritePlayerDefault.setScale(1, 1);
+				spritePlayerHits.setScale(1, 1);
+
+				playerPunch = true;
+
+				updateBranches(score);
+				spriteLog.setPosition(400, 300);
+				logSpeedX = 5000;
+				logActive = true;
+
+				acceptInput = false;
+			}
+		}
 
         /*
         ************************************************************
@@ -299,7 +414,7 @@ int main()
 
 			//update the branch sprites
 			for (int i = 0; i < NUM_BRANCHES; i++) {
-				float height = i * 80;
+				float height = i * 80 - 40;
 				if (branchPositions[i] == side::LEFT) {
 					//move sprite to the left side
 					branches[i].setPosition(380, height);
@@ -314,6 +429,48 @@ int main()
 					//hide the branch
 					branches[i].setPosition(2000, height);
 				}
+			}
+
+			//handle a flying log
+			if (logActive) {
+				spriteLog.setPosition(spriteLog.getPosition().x + (logSpeedX * dt.asSeconds()),
+									  spriteLog.getPosition().y + (logSpeedY * dt.asSeconds()));
+
+				//has the log reached the right hand edge?
+				if (spriteLog.getPosition().x < -100 ||
+						spriteLog.getPosition().x > 1000) {
+					logActive = false;
+					spriteLog.setPosition(400, 300);
+				}
+			}
+
+			//has the player been squished by a branch?
+			if (branchPositions[5] == playerSide) {
+				//death
+				paused = true;
+				acceptInput = false;
+
+				//draw the gravestone
+				spriteRIP.setPosition(370, 280);
+					
+				//draw the log
+				spriteLog.setPosition(400, 300);
+
+				//hide the player
+				spritePlayerDefault.setPosition(1200, 250);
+				spritePlayerHits.setPosition(1200, 250);
+
+				//change the text of the message
+				messageText.setString("SQUISHED!");
+
+				//center it to the screen
+				FloatRect textRect = messageText.getLocalBounds();
+
+				messageText.setOrigin(textRect.left +
+						textRect.width / 2.0f,
+						textRect.top + textRect.height / 2.0f);
+
+				messageText.setPosition(960 / 2.0f, 480 / 2.0f);
 			}
 
 		} //end if (!paused)
@@ -335,6 +492,13 @@ int main()
 			window.draw(branches[i]);
 		}
 		window.draw(spriteTree);
+		window.draw(spriteLog);
+		if (playerPunch)
+			window.draw(spritePlayerHits);
+		else
+			window.draw(spritePlayerDefault);
+		window.draw(spriteRIP);
+
 		if (wingFlap)
 			window.draw(spriteBird);
 		else
@@ -358,7 +522,7 @@ int main()
 //
 void updateBranches(int seed) {
 	//move all the branches down one place
-	for (int i = NUM_BRANCHES - 1; i > 0; --i) {
+	for (int i = NUM_BRANCHES - 1; i > 0; i--) {
 		branchPositions[i] = branchPositions[i - 1];
 	}
 
