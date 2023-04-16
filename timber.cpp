@@ -1,4 +1,5 @@
 #include <SFML/Graphics.hpp>
+#include <SFML/Audio.hpp>
 #include "timber.h"
 #include <iostream>
 #include <sstream>
@@ -201,6 +202,25 @@ int main()
 	//player punch
 	bool playerPunch = false;
 
+	//prerpare sounds
+	//the player chopping sound
+	SoundBuffer chopBuffer;
+	chopBuffer.loadFromFile(dir + "sound/chop.wav");
+	Sound chop;
+	chop.setBuffer(chopBuffer);
+
+	//the playe's death sound
+	SoundBuffer deathBuffer;
+	deathBuffer.loadFromFile(dir + "sound/death.wav");
+	Sound death;
+	death.setBuffer(deathBuffer);
+
+	//out of time sound
+	SoundBuffer ootBuffer;
+	ootBuffer.loadFromFile(dir + "sound/out_of_time.wav");
+	Sound outOfTime;
+	outOfTime.setBuffer(ootBuffer);
+
 	while (window.isOpen())
     {
         /*
@@ -276,6 +296,9 @@ int main()
 				logActive = true;
 
 				acceptInput = false;
+
+				//play a chop sound
+				chop.play();
 			}
 
 			if (Keyboard::isKeyPressed(Keyboard::Left)) {
@@ -297,6 +320,9 @@ int main()
 				logActive = true;
 
 				acceptInput = false;
+				
+				//play a chop sound
+				chop.play();
 			}
 		}
 
@@ -325,6 +351,9 @@ int main()
 				messageText.setOrigin(textRect.left + textRect.width / 2.0f,
 					textRect.top + textRect.height / 2.0f);
 				messageText.setPosition(960 / 2.0f, 480 / 2.0f);
+				
+				//play the out of time sound
+				outOfTime.play();
 			}
 
 			//setup the bird
@@ -471,6 +500,9 @@ int main()
 						textRect.top + textRect.height / 2.0f);
 
 				messageText.setPosition(960 / 2.0f, 480 / 2.0f);
+				
+				//play the death sound
+				death.play();
 			}
 
 		} //end if (!paused)
